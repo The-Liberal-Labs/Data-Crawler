@@ -1,153 +1,89 @@
-# ⚡ Quick Reference - Updated System
+# ⚡ Quick Reference
 
-## 🎯 Key Changes Made
-1. **Neo4j**: Uses your existing Neo4j Desktop (no Docker Neo4j)
-2. **Milvus**: Exact v2.6.2 with official setup
-3. **Enhanced Embedding**: RTX 4050 optimized + docling data handling  
-4. **Better Data Pipeline**: Improved docling → embedding → vector flow
+## 🎯 Key System Updates
+1. **Single Machine Deployment**: Replaced complex multi-device network bridging. All services run uniformly on a single server structure.
+2. **AI Models Migration**: 
+   - Moved from local Gemma 3-4B to **Google `gemini-2.5-flash-lite`** (via `google-genai` SDK).
+   - Moved from local EmbeddingGemma to **Google `gemini-embedding-001`**.
+3. **Local Processing**: Kept **Docling** for private, robust document extraction (PDF, DOCX).
+4. **Data Stores**: **Milvus** (Vector) and **Neo4j** (Graph using powerful Cypher queries) remain local and connected via Docker.
 
 ## 🚀 Quick Deployment Commands
 
-### Mac Mini (Main Backend)
 ```bash
-# Setup
-cp .env.mac-mini.template orchestrator_api/.env
-# Edit NEO4J_PASSWORD in orchestrator_api/.env
-./setup_mac_mini.sh
-./start_databases.sh  # Only MongoDB (Neo4j Desktop already running)
+# 1. Environment configuration
+cp .env.template .env
+# Edit .env to add your GEMINI_API_KEY and database credentials
+
+# 2. Start Databases
+docker-compose -f docker-compose.databases.yml up -d
+
+# 3. Setup Dependencies
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# 4. Start Services
 ./start_services.sh
-
-# Health Check
-curl http://localhost:8000/health
 ```
 
-### Dell Laptop (Vector & Embedding)
-```bash
-# Setup Milvus v2.6.2 FIRST
-./setup_milvus_v2.6.2.sh
+## 📊 Service Endpoints & Architecture Map
 
-# Setup services
-cp .env.dell.template gpu_services/embedding_service/.env
-cp .env.dell.template gpu_services/knowledge_graph_service/.env
-# Edit NEO4J_PASSWORD in both .env files
-./setup_dell_laptop.sh
-./start_services.sh
-
-# Health Checks
-curl http://localhost:8002/health  # Embedding
-curl http://localhost:8003/health  # Knowledge Graph
-curl http://127.0.0.1:9091/webui/  # Milvus WebUI
-```
-
-### Lenovo Laptop (LLM Service)
-```bash
-# Setup
-cd gpu_services/llm_service
-cp ../../.env.lenovo.template .env
-./setup_local.sh
-./start_local.sh
-
-# Health Check
-curl http://localhost:8001/health
-```
-
-## 🧪 Full System Test
-```bash
-# From any machine
-./test_distributed_system.sh
-```
-
-## 🔧 Important Configuration Changes
-
-### Mac Mini `.env` Updates:
-```env
-# Your Neo4j Desktop password
-NEO4J_PASSWORD=your-actual-neo4j-desktop-password
-
-# Network IPs (update as needed)
-MILVUS_HOST=192.168.100.42
-LLM_SERVICE_URL=http://192.168.100.43:8001
-```
-
-### Dell `.env` Updates:
-```env
-# Neo4j Desktop on Mac Mini
-NEO4J_URI=bolt://192.168.100.41:7687
-NEO4J_PASSWORD=your-actual-neo4j-desktop-password
-
-# RTX 4050 optimization
-GPU_MEMORY_FRACTION=0.85
-BATCH_SIZE=16
-```
-
-## 📊 Service Endpoints
-
-| Machine | Service | URL | Purpose |
-|---------|---------|-----|---------|
-| Mac Mini | Orchestrator | http://192.168.100.41:8000 | Main API |
-| Mac Mini | Docling | http://192.168.100.41:8004 | Document processing |
-| Mac Mini | Neo4j Desktop | bolt://192.168.100.41:7687 | Graph database |
-| Mac Mini | MongoDB | mongodb://192.168.100.41:27017 | User data |
-| Lenovo | LLM Service | http://192.168.100.43:8001 | Gemma 3-4B |
-| Dell | Embedding | http://192.168.100.42:8002 | EmbeddingGemma |
-| Dell | Knowledge Graph | http://192.168.100.42:8003 | Graph builder |
-| Dell | Milvus v2.6.2 | http://192.168.100.42:19530 | Vector database |
-| Dell | Milvus WebUI | http://192.168.100.42:9091/webui/ | Vector DB UI |
+| Service | Address | Purpose |
+|---------|---------|---------|
+| **Orchestrator** | `http://localhost:8000` | Main Application API |
+| **Docling** | `http://localhost:8004` | PDF/Data local processor |
+| **LLM Proxy** | `http://localhost:8001` | Routes requests to `gemini-2.5-flash-lite` |
+| **Embedding Proxy** | `http://localhost:8002` | Routes strings to `gemini-embedding-001` |
+| **Knowledge Graph** | `http://localhost:8003` | Builds cypher transactions |
+| **Neo4j (Database)** | `bolt://localhost:7687` | Knowledge graph via Cypher |
+| **Neo4j (UI)** | `http://localhost:7474` | Cypher Playground & Visualizer |
+| **Milvus**| `localhost:19530` | Vector / Semantic Search |
+| **MongoDB** | `mongodb://localhost:27017` | User & State storage |
 
 ## 🔍 Enhanced Data Flow
+
+```text
+Document Upload
+      ↓
+Docling Local Processing (Text/Table structured extraction)
+      ↓
+Entity & Relation Extraction -> Powered by Gemini 2.5 Flash Lite
+      ↓  
+Neo4j Graph Storage -> via Cypher MERGE queries
+      ↓
+Embedding Generation -> Powered by Gemini Embedding 001
+      ↓
+Milvus Storage -> Fast HNSW vector index
 ```
-Document Upload (Mac) 
-    ↓
-Docling Processing (Mac) - Granite-Docling MLX
-    ↓
-Entity Extraction (Dell → Lenovo) - Gemma 3-4B
-    ↓  
-Neo4j Storage (Mac) - Your Neo4j Desktop
-    ↓
-Enhanced Embedding (Dell) - EmbeddingGemma + Docling cleaning
-    ↓
-Milvus v2.6.2 Storage (Dell) - HNSW indexing
+
+## 🔧 Important Configuration Notes
+
+### `.env` File Updates:
+```env
+# Required for GenAI features
+GEMINI_API_KEY=your_google_ai_studio_api_key
+
+# Proper local database routing
+NEO4J_URI=bolt://localhost:7687
+MILVUS_HOST=localhost
 ```
 
 ## ⚠️ Critical Notes
-- **Neo4j Desktop**: Must be running before starting other services
-- **Milvus v2.6.2**: Run `./setup_milvus_v2.6.2.sh` BEFORE other Dell services  
-- **Docker Desktop**: Required on Dell for GPU support with Milvus
-- **Network**: Update all IP addresses in config files to match your setup
-- **GPU Memory**: Reduce batch sizes if RTX 4050 runs out of memory
+- **Cypher Queries**: Ensure that any manual updates to graph logic utilize standard Cypher Language (e.g., `MATCH`, `MERGE`, `CREATE`). Avoid plain text injection.
+- **Milvus Lifecycle**: Milvus can consume heavy RAM. Make sure Docker is allocated enough resource room.
+- **Docling Extraction**: Time to process a document primarily depends on your local machine's speed to run Docling's local MLX framework.
 
-## 🐛 Quick Fixes
+## 🐛 Quick Debugging
+
 ```bash
-# Neo4j connection issues
-neo4j status  # Check if Desktop is running
+# Check Docker containers
+docker ps
 
-# Milvus v2.6.2 issues  
-cd milvus-v2.6.2 && docker compose ps
+# Test Gemini reachability
+python -c "from google import genai; import os; c=genai.Client(api_key=os.environ.get('GEMINI_API_KEY')); print(c.models.generate_content(model='gemini-2.5-flash-lite', contents='Test').text)"
 
-# GPU memory issues
-nvidia-smi  # Check GPU usage
-# Then reduce GPU_MEMORY_FRACTION in .env
-
-# Service not responding
-curl http://IP:PORT/health  # Test individual services
+# Check service health individually
+curl http://localhost:8000/health
+curl http://localhost:8001/health
 ```
-
-## 📝 Test Document Upload
-```bash
-# Register user
-curl -X POST "http://192.168.100.41:8000/api/v1/auth/signup" \
-  -H "Content-Type: application/json" \
-  -d '{"username": "test@example.com", "password": "testpass123"}'
-
-# Login and upload
-TOKEN=$(curl -X POST "http://192.168.100.41:8000/api/v1/auth/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=test@example.com&password=testpass123" | jq -r .access_token)
-
-curl -X POST "http://192.168.100.41:8000/api/v1/documents/upload" \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "file=@test-document.pdf"
-```
-
----
-**🚀 Your enhanced distributed document library is ready to deploy!**

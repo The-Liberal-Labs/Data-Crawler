@@ -1,151 +1,129 @@
-# Distributed Document Library System
+# Document Library System
 
-A high-performance, scalable document intelligence system distributed across multiple machines with local AI models for complete data privacy and confidentiality.
+A high-performance, scalable document intelligence system running on a single production machine, utilizing Google's advanced Gemini AI models alongside local document processing, graph, and vector databases for a complete, robust architecture.
 
 ## 🏗️ System Architecture
 
-### Distributed Deployment
-- **Mac Mini (16GB RAM)**: Main backend, orchestrator API, document processing, MongoDB, Neo4j
-- **Lenovo Laptop (RTX 4070, 32GB RAM)**: LLM service with Gemma 3-4B model  
-- **Dell Laptop (RTX 4050, 16GB RAM)**: Embedding service, knowledge graph service, Milvus vector database
+### Production Deployment (Single Machine)
+The system is designed to run seamlessly on a single unified production server or local machine.
+
+- **Main Backend / Orchestrator API**: Manages business logic, JWT authentication, and file routing.
+- **Document Processing (Docling)**: Local service for secure, robust document extraction (text, tables, images).
+- **LLM Service (Google Gemini)**: Intelligent router and processing using `gemini-2.5-flash-lite` via the Google GenAI SDK.
+- **Embedding Service (Google Gemini)**: High-quality vectorization using `gemini-embedding-001` via the Google GenAI SDK.
+- **Graph Database (Neo4j)**: Advanced knowledge graph storage using Cypher.
+- **Vector Database (Milvus)**: High-performance HNSW indexing for semantic search.
+- **Document Store (MongoDB)**: Scalable storage for user metadata and document processing state.
 
 ### Key Features
-- **100% Local AI**: All processing happens on your machines - no data leaves your network
-- **Multi-modal Processing**: Handles PDF, DOCX, PPTX, HTML, CSV, Excel, images, and audio
-- **Advanced Knowledge Graphs**: Automatic entity extraction and relationship mapping using Neo4j
-- **Semantic Search**: High-performance vector search with HNSW indexing in Milvus
-- **JWT Authentication**: Secure user management with proper session handling
-- **Real-time Processing**: Background document processing with status tracking
+- **Hybrid AI Approach**: Leverages powerful online Google Gemini models for LLM and embeddings, while keeping document extraction (Docling) and storage local.
+- **Multi-modal Processing**: Handles PDF, DOCX, PPTX, HTML, CSV, Excel, images, and audio.
+- **Advanced Knowledge Graphs**: Automatic entity extraction and relationship mapping using Neo4j and precise Cypher queries.
+- **Semantic Search**: High-performance vector search in Milvus v2.6+.
+- **JWT Authentication**: Secure user management with proper session handling.
+- **Real-time Processing**: Background document processing with status tracking.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.10+ on all machines
-- NVIDIA drivers and CUDA 12.1+ on GPU machines
-- Docker and Docker Compose (optional)
-- Network connectivity between all machines
+- Python 3.10+
+- Docker and Docker Compose (Required for Milvus and Neo4j)
+- Google Gemini API Key (Get one from [Google AI Studio](https://aistudio.google.com/))
 
 ### 1. Clone and Setup
 
 ```bash
-# On each machine
 git clone <your-repo-url>
 cd document-library
 ```
 
-### 2. Configure Network
+### 2. Configure Environment
 
-Update IP addresses in configuration files to match your network:
-- Mac Mini: `192.168.100.41`
-- Dell Laptop: `192.168.100.42` 
-- Lenovo Laptop: `192.168.100.43`
-
-### 3. Deploy by Machine
-
-#### Mac Mini (Main Backend)
+1. Copy the environment template:
 ```bash
-# Copy and edit environment
-cp .env.mac-mini.template orchestrator_api/.env
-# Edit orchestrator_api/.env with your settings
+cp .env.template .env
+```
+2. Edit `.env` to include your API Keys and database credentials:
+```env
+# Google GenAI Settings
+GEMINI_API_KEY="your-gemini-api-key-here"
 
-# Option A: Automated local setup
-chmod +x setup_mac_mini.sh
-./setup_mac_mini.sh
-./start_databases.sh
-./start_services.sh
-
-# Option B: Docker deployment
-docker-compose -f docker-compose.mac.yml up -d
+# Database Settings
+NEO4J_URI=bolt://localhost:7687
+NEO4J_PASSWORD=your-secure-password
+MILVUS_HOST=localhost
 ```
 
-#### Lenovo Laptop (LLM Service)
+### 3. Deploy the System
+
+We provide a streamlined deployment process:
+
 ```bash
-cd gpu_services/llm_service
-cp ../../.env.lenovo.template .env
-# Edit .env as needed
+# Start Databases (Milvus, Neo4j, MongoDB)
+docker-compose -f docker-compose.databases.yml up -d
 
-# Option A: Local setup
-chmod +x setup_local.sh start_local.sh
-./setup_local.sh
-./start_local.sh
+# Install Python dependencies
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 
-# Option B: Docker deployment
-docker-compose -f ../../docker-compose.lenovo.yml up -d
-```
-
-#### Dell Laptop (Embedding & Vector Services)
-```bash
-cp .env.dell.template gpu_services/embedding_service/.env
-cp .env.dell.template gpu_services/knowledge_graph_service/.env
-# Edit both .env files
-
-# Option A: Local setup
-chmod +x setup_dell_laptop.sh
-./setup_dell_laptop.sh
+# Start all Backend Services
 ./start_services.sh
-
-# Option B: Docker deployment  
-docker-compose -f docker-compose.dell.yml up -d
 ```
 
 ### 4. Test the System
 
 ```bash
-chmod +x test_distributed_system.sh
-./test_distributed_system.sh
+chmod +x test_system.sh
+./test_system.sh
 ```
 
 ## 📊 Service Endpoints
 
-### Mac Mini (192.168.100.41)
-- **Main API**: http://192.168.100.41:8000
-- **API Documentation**: http://192.168.100.41:8000/docs
-- **Docling Service**: http://192.168.100.41:8004
-- **MongoDB**: mongodb://192.168.100.41:27017
-- **Neo4j Browser**: http://192.168.100.41:7474
+All services are exposed locally for security and ease of access:
 
-### Lenovo Laptop (192.168.100.43)
-- **LLM Service**: http://192.168.100.43:8001
-- **Health Check**: http://192.168.100.43:8001/health
-- **API Docs**: http://192.168.100.43:8001/docs
-
-### Dell Laptop (192.168.100.42)
-- **Embedding Service**: http://192.168.100.42:8002
-- **Knowledge Graph Service**: http://192.168.100.42:8003
-- **Milvus**: localhost:19530 (internal)
+- **Main API**: `http://localhost:8000`
+- **Main API Docs**: `http://localhost:8000/docs`
+- **Docling Service**: `http://localhost:8004`
+- **LLM Service (Gemini Router)**: `http://localhost:8001`
+- **Embedding Service (Gemini Router)**: `http://localhost:8002`
+- **Knowledge Graph Service**: `http://localhost:8003`
+- **Neo4j Browser**: `http://localhost:7474`
+- **Milvus / Vector DB**: `localhost:19530`
+- **MongoDB**: `mongodb://localhost:27017`
 
 ## 🔧 API Usage Examples
 
 ### 1. User Registration
 ```bash
-curl -X POST "http://192.168.100.41:8000/api/v1/auth/signup" \
+curl -X POST "http://localhost:8000/api/v1/auth/signup" \
   -H "Content-Type: application/json" \
   -d '{"username": "user@example.com", "password": "securepass123"}'
 ```
 
 ### 2. Login
 ```bash
-curl -X POST "http://192.168.100.41:8000/api/v1/auth/login" \
+curl -X POST "http://localhost:8000/api/v1/auth/login" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "username=user@example.com&password=securepass123"
 ```
 
 ### 3. Upload Document
 ```bash
-curl -X POST "http://192.168.100.41:8000/api/v1/documents/upload" \
+curl -X POST "http://localhost:8000/api/v1/documents/upload" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "file=@document.pdf"
 ```
 
 ### 4. Check Processing Status
 ```bash
-curl "http://192.168.100.41:8000/api/v1/documents/DOC_ID/status" \
+curl "http://localhost:8000/api/v1/documents/DOC_ID/status" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 ### 5. Query Documents
 ```bash
-curl -X POST "http://192.168.100.41:8000/api/v1/query/" \
+curl -X POST "http://localhost:8000/api/v1/query/" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"prompt": "What are the main topics in my documents?"}'
@@ -153,156 +131,79 @@ curl -X POST "http://192.168.100.41:8000/api/v1/query/" \
 
 ## 🔍 Processing Pipeline
 
-1. **Document Upload**: User uploads file through orchestrator API
-2. **Content Extraction**: Docling service extracts text, images, tables using Granite-Docling MLX
-3. **Chunking**: Content is intelligently chunked with context preservation
-4. **Entity Extraction**: Gemma 3-4B model extracts entities and relationships
-5. **Knowledge Graph**: Entities stored in Neo4j with relationships
-6. **Embeddings**: Text chunks vectorized using EmbeddingGemma-300M
-7. **Vector Storage**: Embeddings stored in Milvus with user isolation
-8. **Query Processing**: Semantic search + graph RAG for comprehensive answers
+1. **Document Upload**: User uploads file through the orchestrator API.
+2. **Content Extraction**: Local Docling service extracts clean text, images, and tables.
+3. **Chunking**: Content is intelligently chunked with context preservation.
+4. **Entity Extraction**: `gemini-2.5-flash-lite` dynamically extracts entities and maps relationships.
+5. **Knowledge Graph**: Extracted entities are stored in Neo4j using robust Cypher transactions.
+6. **Embeddings**: Text chunks are vectorized using `gemini-embedding-001`.
+7. **Vector Storage**: Embeddings are indexed in Milvus for blazing-fast semantic retrieval.
+8. **Query Processing**: Vector Search + Graph RAG combined by Gemini to provide comprehensive answers.
+
+## 🕸️ Neo4j & Cypher Query Language Guide
+
+The system uses advanced Knowledge Graphs to improve referencing and document context. We interact with Neo4j through the standard **Cypher query language**.
+
+If you are developing or reading the graphs directly (via the Neo4j Browser at `http://localhost:7474`), here are some essential Cypher patterns we use:
+
+### 1. Retrieving a Document's Entities
+```cypher
+MATCH (d:Document {id: $doc_id})-[:CONTAINS]->(e:Entity)
+RETURN e.name, e.type, e.description
+```
+
+### 2. Finding Relationships Between Entities
+```cypher
+MATCH (e1:Entity)-[r]->(e2:Entity)
+WHERE e1.name CONTAINS 'AI' OR e2.name CONTAINS 'AI'
+RETURN e1.name, type(r), e2.name
+LIMIT 50
+```
+
+### 3. Proper Data Insertion (MERGE vs CREATE)
+To ensure we don't create duplicate entities, the Graph builder service uses `MERGE`:
+```cypher
+MERGE (e1:Entity {name: $entity_name})
+SET e1.type = $entity_type, e1.updated_at = timestamp()
+MERGE (e2:Entity {name: $target_name})
+MERGE (e1)-[r:RELATES_TO {type: $relation_type}]->(e2)
+```
+*Note: Always use parameters (`$param_name`) in application code to prevent Cypher injection.*
 
 ## 🛠️ Technology Stack
 
-### AI Models (All Local)
-- **LLM**: Google Gemma 3-4B Instruct (vision-capable)
-- **Embeddings**: Google EmbeddingGemma-300M
-- **Document Processing**: IBM Granite-Docling-258M MLX
-
-### Databases
-- **Vector Database**: Milvus 2.5 with HNSW indexing
-- **Graph Database**: Neo4j 5.15 Community
-- **Document Store**: MongoDB with Motor async driver
-
-### Backend
-- **Framework**: FastAPI with async/await
-- **Authentication**: JWT with bcrypt password hashing
-- **Processing**: Background task queues
-- **API**: OpenAPI/Swagger documentation
-
-### Infrastructure
-- **Containerization**: Docker & Docker Compose
-- **GPU Acceleration**: NVIDIA CUDA, MLX for Apple Silicon
-- **Networking**: HTTP REST APIs with proper error handling
-
-## 📁 Project Structure
-
-```
-document-library/
-├── orchestrator_api/           # Main FastAPI backend (Mac Mini)
-│   ├── app/
-│   │   ├── api/               # API endpoints
-│   │   ├── core/              # Security & config
-│   │   ├── db/                # Database handlers
-│   │   ├── models/            # Pydantic models
-│   │   └── services/          # Business logic
-│   └── requirements.txt
-├── gpu_services/              # GPU-powered microservices
-│   ├── llm_service/          # Gemma 3-4B service (Lenovo)
-│   ├── embedding_service/    # EmbeddingGemma service (Dell)
-│   ├── knowledge_graph_service/ # Graph builder (Dell)
-│   └── docling_service/      # Document processor (Mac)
-├── docker-compose.mac.yml     # Mac Mini deployment
-├── docker-compose.lenovo.yml  # Lenovo deployment
-├── docker-compose.dell.yml    # Dell deployment
-└── setup scripts & configs
-```
-
-## 🔒 Security & Privacy
-
-- **Data Isolation**: All processing happens locally on your hardware
-- **User Segregation**: Each user's data is completely isolated
-- **Secure Authentication**: JWT tokens with configurable expiration
-- **Network Security**: Services communicate over private network
-- **No External APIs**: No data sent to cloud services (except optional AssemblyAI for audio)
-
-## 📈 Performance & Scaling
-
-### Current Capacity
-- **LLM Service**: ~2-4 requests/minute on RTX 4070
-- **Embedding Service**: ~100-500 documents/minute on RTX 4050
-- **Vector Search**: Sub-second queries on millions of vectors
-- **Document Processing**: 1-10 documents/minute depending on size
-
-### Optimization Tips
-- Adjust `GPU_MEMORY_FRACTION` based on available VRAM
-- Use SSD storage for better I/O performance
-- Consider CPU-only deployment for embedding service if needed
-- Scale horizontally by adding more GPU machines
+- **LLM**: Google `gemini-2.5-flash-lite` (via google-genai SDK)
+- **Embeddings**: Google `gemini-embedding-001` (via google-genai SDK)
+- **Document Processing**: Local Docling
+- **Databases**: Milvus 2.6+ (Vector), Neo4j (Graph), MongoDB (Document)
+- **Backend Framework**: FastAPI (Python)
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **GPU Out of Memory**
-   ```bash
-   # Reduce memory fraction in .env files
-   GPU_MEMORY_FRACTION=0.8
-   
-   # Or restart GPU services
-   docker restart llm_service
+1. **Missing Google API Key**: 
+   Ensure `GEMINI_API_KEY` is present in your `.env`. If using the new SDK, verify with:
+   ```python
+   from google import genai
+   import os
+   client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
    ```
 
-2. **Network Connectivity**
-   ```bash
-   # Test connectivity
-   ping 192.168.100.41
-   telnet 192.168.100.43 8001
-   
-   # Check firewall
-   sudo ufw status
-   ```
+2. **Neo4j Cypher Execution Errors**:
+   If queries fail, check the Neo4j logs. Ensure you aren't passing naked strings where property dictionaries are expected. Use the Neo4j Desktop browser (`localhost:7474`) to manually test Cypher syntax.
 
-3. **Service Dependencies**
-   ```bash
-   # Check service startup order
-   # 1. Databases first (Mac Mini)
-   # 2. LLM service (Lenovo) 
-   # 3. Embedding/KG services (Dell)
-   # 4. Orchestrator (Mac Mini)
-   ```
-
-4. **Model Download Issues**
-   ```bash
-   # Clear Hugging Face cache
-   rm -rf ~/.cache/huggingface
-   
-   # Set HF_TOKEN for private models
-   export HF_TOKEN=your_token_here
-   ```
+3. **Milvus Connection Failed**:
+   Ensure Docker containers are running. `docker-compose -f docker-compose.databases.yml ps`
 
 ### Log Locations
-- **Docker**: `docker-compose logs -f service_name`
-- **Local**: Check `logs/` directory in each service
-- **System**: Use `journalctl -f` for system services
+- **System Services (FastAPI)**: Console output or respective service `logs/` directory.
+- **Databases**: `docker logs milvus` or `docker logs neo4j`.
 
 ## 🤝 Contributing
-
 1. Fork the repository
 2. Create a feature branch
-3. Test on all three machine types
-4. Submit a pull request with detailed description
+3. Submit a pull request with detailed description
 
 ## 📄 License
-
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- **IBM** for the Granite-Docling model
-- **Google** for the Gemma model family
-- **Milvus** for the high-performance vector database
-- **Neo4j** for graph database capabilities
-- **FastAPI** for the excellent async framework
-
-## 📞 Support
-
-For issues and questions:
-1. Check the troubleshooting section
-2. Run the test suite: `./test_distributed_system.sh`
-3. Check individual service logs
-4. Verify network connectivity and GPU status
-
----
-
-**Built for privacy, performance, and scalability** 🚀
